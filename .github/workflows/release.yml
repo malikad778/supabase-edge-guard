@@ -18,10 +18,16 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint && pnpm typecheck && pnpm build && pnpm test
-      - run: npm publish --provenance --access public
+      - name: Publish to npm
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Skip npm publish if NPM_TOKEN not configured
+        if: ${{ secrets.NPM_TOKEN == '' }}
+        run: echo "::notice::NPM_TOKEN secret is not set; skipping npm publish."
       - name: Move the major version tag (v0)
+        if: startsWith(github.ref_name, 'v') && github.ref_name != 'v0'
         run: |
           major="${GITHUB_REF_NAME%%.*}"
           git tag -f "$major"

@@ -1,0 +1,17 @@
+#!/usr/bin/env php
+<?php
+
+$dir = __DIR__;
+$js = $dir . DIRECTORY_SEPARATOR . 'supabase-edge-guard.js';
+
+if (!file_exists($js)) {
+    fwrite(STDERR, "Error: supabase-edge-guard.js not found at {$js}\n");
+    exit(1);
+}
+
+$args = array_slice($argv, 1);
+$escapedArgs = array_map('escapeshellarg', $args);
+$cmd = 'node ' . escapeshellarg($js) . ($escapedArgs ? ' ' . implode(' ', $escapedArgs) : '');
+
+passthru($cmd, $status);
+exit($status);

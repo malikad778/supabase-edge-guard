@@ -1,0 +1,36 @@
+{
+  "name": "malikad778/supabase-edge-guard",
+  "description": "Cross-boundary static analyzer for Next.js, TanStack Start, Lovable and Supabase apps. Catches getSession() spoofing, service_role bypasses, exposed SECURITY DEFINER RPCs and RLS mistakes before deploy.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "supabase",
+    "security",
+    "static-analysis",
+    "rls",
+    "row-level-security",
+    "postgresql",
+    "sarif",
+    "nextjs",
+    "mcp"
+  ],
+  "homepage": "https://malikad778.github.io/supabase-edge-guard/",
+  "support": {
+    "issues": "https://github.com/malikad778/supabase-edge-guard/issues",
+    "source": "https://github.com/malikad778/supabase-edge-guard",
+    "docs": "https://github.com/malikad778/supabase-edge-guard/tree/main/docs"
+  },
+  "authors": [
+    {
+      "name": "Malik Adnan",
+      "email": "malikadnan778@gmail.com",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=7.4 || >=8.0"
+  },
+  "bin": [
+    "bin/supabase-edge-guard"
+  ]
+}
