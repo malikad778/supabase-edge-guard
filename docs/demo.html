@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Edge Guard | Cross-Boundary Security Scanner & RLS Auditor</title>
+  <meta name="description" content="Offline static security analyzer for Supabase, Next.js, TanStack Start, and Lovable apps. Audit Row Level Security (RLS), detect auth spoofing, prevent service_role leaks, and generate AI fixes.">
+  <meta name="keywords" content="supabase, security, row level security, rls, nextjs, lovable, vite, static analysis, sarif, postgresql, getSession spoofing">
+  <meta property="og:title" content="Supabase Edge Guard - Cross-Boundary Static Security Analyzer">
+  <meta property="og:description" content="Audit TypeScript code & SQL migrations together. Catch auth bypasses, exposed SECURITY DEFINER RPCs, and missing RLS before deploy.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#12181f">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #0c1017;
+      --bg-surface: #131923;
+      --bg-card: rgba(22, 29, 41, 0.75);
+      --bg-card-hover: rgba(28, 38, 54, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(62, 207, 142, 0.3);
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      
+      --brand: #3ecf8e;
+      --brand-glow: rgba(62, 207, 142, 0.25);
+      --brand-dark: #1b4b35;
+      
+      --error: #f85149;
+      --error-bg: rgba(248, 81, 73, 0.12);
+      --warning: #d29922;
+      --warning-bg: rgba(210, 153, 34, 0.12);
+      --info: #58a6ff;
+      --info-bg: rgba(88, 166, 255, 0.12);
+      --success: #3fb950;
+      
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient gradient effects */
+    .glow-top {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1000px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(62, 207, 142, 0.12) 0%, rgba(20, 30, 45, 0.05) 50%, transparent 80%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Navbar */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 16, 23, 0.85);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 1.15rem;
+    }
+    .brand-logo svg {
+      width: 28px;
+      height: 28px;
+      fill: var(--brand);
+    }
+    .badge-version {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: rgba(62, 207, 142, 0.15);
+      color: var(--brand);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      border: 1px solid var(--brand-glow);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-github:hover {
+      border-color: var(--brand);
+      background: rgba(62, 207, 142, 0.08);
+      transform: translateY(-1px);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero Section */
+    section.hero {
+      padding: 4.5rem 0 3rem;
+      text-align: center;
+    }
+    .pill-announcement {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(62, 207, 142, 0.1);
+      border: 1px solid var(--border-accent);
+      color: var(--brand);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .pill-announcement span {
+      background: var(--brand);
+      color: #0c1017;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+    }
+    h1.hero-title {
+      font-size: clamp(2.3rem, 5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(180deg, #ffffff 30%, #8b949e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      margin: 0 auto 2.5rem;
+      font-weight: 400;
+    }
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .cmd-box {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(19, 25, 35, 0.95);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .cmd-box .prompt {
+      color: var(--brand);
+      user-select: none;
+    }
+    .btn-copy {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 0.25rem;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .btn-copy:hover {
+      color: var(--brand);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .btn-primary {
+      background: var(--brand);
+      color: #0c1017;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      box-shadow: 0 0 25px var(--brand-glow);
+    }
+    .btn-primary:hover {
+      background: #4ae09e;
+      transform: translateY(-1px);
+      box-shadow: 0 0 35px rgba(62, 207, 142, 0.45);
+    }
+
+    /* Key Metrics */
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 1.25rem;
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+      text-align: left;
+    }
+    .metric-val {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--brand);
+      font-family: var(--font-mono);
+    }
+    .metric-label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+
+    /* Interactive Demo Playground */
+    section.playground-section {
+      padding: 3rem 0;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .section-tag {
+      color: var(--brand);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 650px;
+      margin: 0.5rem auto 0;
+    }
+
+    .playground-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    .playground-toolbar {
+      background: rgba(12, 16, 23, 0.7);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .preset-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .preset-selector select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+    .preset-selector select:focus {
+      border-color: var(--brand);
+    }
+    .toolbar-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--text-muted);
+    }
+    .btn-scan {
+      background: var(--brand);
+      color: #0c1017;
+      border: none;
+      padding: 0.45rem 1.1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-scan:hover {
+      background: #4ae09e;
+      box-shadow: 0 0 15px var(--brand-glow);
+    }
+    .btn-fix {
+      background: rgba(62, 207, 142, 0.15);
+      border: 1px solid var(--border-accent);
+      color: var(--brand);
+    }
+    .btn-fix:hover {
+      background: rgba(62, 207, 142, 0.25);
+    }
+
+    .playground-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 480px;
+    }
+    @media (max-width: 900px) {
+      .playground-grid { grid-template-columns: 1fr; }
+    }
+
+    .code-panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: #0d1117;
+    }
+    .panel-header {
+      padding: 0.6rem 1.2rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .code-editor-area {
+      flex: 1;
+      position: relative;
+    }
+    .code-editor-area textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e6edf3;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      line-height: 1.55;
+      padding: 1.25rem;
+      resize: none;
+      white-space: pre;
+    }
+
+    .results-panel {
+      display: flex;
+      flex-direction: column;
+      background: #10151e;
+    }
+    .score-banner {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(19, 25, 35, 0.6);
+    }
+    .score-group {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .grade-badge {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      background: var(--error-bg);
+      color: var(--error);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      transition: all 0.3s;
+    }
+    .grade-badge.grade-a {
+      background: rgba(62, 207, 142, 0.15);
+      color: var(--brand);
+      border-color: var(--border-accent);
+    }
+    .score-meta h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .score-meta p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .findings-container {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .finding-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--error);
+      padding: 0.9rem 1rem;
+      border-radius: 6px;
+      transition: transform 0.15s;
+    }
+    .finding-card.warning {
+      border-left-color: var(--warning);
+    }
+    .finding-card.info {
+      border-left-color: var(--info);
+    }
+    .finding-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+    .finding-badge {
+      font-size: 0.72rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+    .finding-badge.error { background: var(--error-bg); color: var(--error); }
+    .finding-badge.warning { background: var(--warning-bg); color: var(--warning); }
+    .finding-badge.info { background: var(--info-bg); color: var(--info); }
+    .finding-rule {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+    .finding-location {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+    .finding-msg {
+      font-size: 0.85rem;
+      color: #c9d1d9;
+      line-height: 1.45;
+    }
+    .finding-snippet {
+      margin-top: 0.5rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #79c0ff;
+      border-left: 2px solid var(--border);
+      overflow-x: auto;
+    }
+
+    /* Comparison Table Section */
+    section.comparison-section {
+      padding: 4rem 0;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 2rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+    table.compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    table.compare-table th, table.compare-table td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    table.compare-table th {
+      background: rgba(12, 16, 23, 0.9);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    table.compare-table tr:last-child td {
+      border-bottom: none;
+    }
+    table.compare-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .badge-check {
+      color: var(--brand);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .badge-cross {
+      color: var(--text-dim);
+    }
+
+    /* Rules Grid */
+    section.rules-section {
+      padding: 3rem 0;
+    }
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+    .rule-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 1.25rem;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+    .rule-card:hover {
+      border-color: var(--border-accent);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+    .rule-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+    .rule-id {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--brand);
+      font-size: 0.9rem;
+    }
+    .rule-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 0.4rem;
+    }
+    .rule-summary {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Integration Section */
+    section.integration-section {
+      padding: 4rem 0;
+    }
+    .integration-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 850px) {
+      .integration-grid { grid-template-columns: 1fr; }
+    }
+    .integration-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .integration-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .integration-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .snippet-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #e6edf3;
+      overflow-x: auto;
+      flex: 1;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      background: #080b0f;
+      padding: 3rem 0 2rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .footer-content {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .footer-brand h4 {
+      color: var(--text-main);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .footer-links {
+      display: flex;
+      gap: 2.5rem;
+    }
+    .footer-links ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover {
+      color: var(--brand);
+    }
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 1.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: rgba(19, 25, 35, 0.95);
+      border: 1px solid var(--brand);
+      color: var(--text-main);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+      font-size: 0.875rem;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-top"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="#" class="brand-logo" id="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4zm0 2.18l7 3.12v4.7c0 4.54-3.13 8.78-7 9.88-3.87-1.1-7-5.34-7-9.88V7.3l7-3.12zm-1 5v6l5-3-5-3z"/>
+        </svg>
+        <span>supabase-edge-guard</span>
+        <span class="badge-version">v0.2.0</span>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#playground">Playground</a></li>
+          <li><a href="#rules">Rules</a></li>
+          <li><a href="#comparison">Compare</a></li>
+          <li><a href="#integration">Integrations</a></li>
+          <li><a href="https://github.com/malikad778/supabase-edge-guard/tree/main/docs">Docs</a></li>
+          <li>
+            <a href="https://github.com/malikad778/supabase-edge-guard" class="btn-github" target="_blank" rel="noopener">
+              <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+              </svg>
+              GitHub
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Hero -->
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="pill-announcement">
+          <span>NEW</span> Cross-Boundary Security for Next.js, TanStack & Lovable
+        </div>
+        <h1 class="hero-title">
+          Stop Auth Bypass & RLS Leaks<br>Before You Deploy
+        </h1>
+        <p class="hero-subtitle">
+          The first static analyzer that correlates your <strong>TypeScript AST</strong> with your <strong>PostgreSQL migrations</strong>. Catch getSession spoofing, unprotected storage buckets, and exposed SECURITY DEFINER RPCs offline.
+        </p>
+
+        <div class="hero-cta">
+          <div class="cmd-box">
+            <span class="prompt">$</span>
+            <span id="cli-cmd">npx supabase-edge-guard</span>
+            <button class="btn-copy" id="btn-copy-cmd" title="Copy command" aria-label="Copy CLI Command">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+          <a href="#playground" class="btn-primary" id="btn-hero-playground">Try Live Simulator</a>
+        </div>
+
+        <div class="hero-metrics">
+          <div class="metric-card">
+            <div class="metric-val">&lt; 0.6s</div>
+            <div class="metric-label">1,000 TS files + 200 SQL migrations</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">100%</div>
+            <div class="metric-label">Offline & Private (0 network calls)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">18 Rules</div>
+            <div class="metric-label">Covering TS, SQL, Cross & Config</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">SARIF 2.1</div>
+            <div class="metric-label">Native GitHub Code Scanning</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Simulator / Playground -->
+    <section class="playground-section" id="playground">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Interactive Simulator</div>
+          <h2 class="section-title">Test Your Code in the Browser</h2>
+          <p class="section-desc">Select a vulnerability preset or edit the code directly to see how Edge Guard correlates TypeScript and PostgreSQL migrations in real-time.</p>
+        </div>
+
+        <div class="playground-container">
+          <div class="playground-toolbar">
+            <div class="preset-selector">
+              <label for="preset-select">Preset scenario:</label>
+              <select id="preset-select">
+                <option value="sg001_get_session">SG001 - Server getSession() Spoofing</option>
+                <option value="sg010_table_without_rls">SG010 - Table Without Row Level Security</option>
+                <option value="sg004_definer_rpc">SG004 - Exposed SECURITY DEFINER RPC</option>
+                <option value="sg003_service_key_leak">SG003 - service_role Key Leaked to Browser</option>
+                <option value="sg005_unwrapped_uid">SG005 - Slow Uncached auth.uid() in RLS</option>
+              </select>
+            </div>
+
+            <div class="toolbar-actions">
+              <button class="btn-action btn-fix" id="btn-apply-fix" title="Apply recommended remediation">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+                Apply Auto-Fix
+              </button>
+              <button class="btn-action" id="btn-copy-lovable" title="Copy AI prompt for Lovable or Cursor">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Lovable Prompt
+              </button>
+              <button class="btn-scan" id="btn-run-scan">
+                Re-scan
+              </button>
+            </div>
+          </div>
+
+          <div class="playground-grid">
+            <!-- Left Code Panel -->
+            <div class="code-panel">
+              <div class="panel-header">
+                <span id="current-filename">middleware.ts</span>
+                <span>Editable Source</span>
+              </div>
+              <div class="code-editor-area">
+                <textarea id="code-input" spellcheck="false" aria-label="Code editor input"></textarea>
+              </div>
+            </div>
+
+            <!-- Right Results Panel -->
+            <div class="results-panel">
+              <div class="score-banner">
+                <div class="score-group">
+                  <div class="grade-badge" id="grade-display">F</div>
+                  <div class="score-meta">
+                    <h4 id="score-text">Score 0 / 100</h4>
+                    <p id="findings-count-summary">1 error detected</p>
+                  </div>
+                </div>
+                <div class="badge-status" id="status-pill" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--error);">FAILING</div>
+              </div>
+
+              <div class="findings-container" id="findings-list">
+                <!-- Dynamically populated findings -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cross Boundary Matrix -->
+    <section class="comparison-section" id="comparison">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Feature Matrix</div>
+          <h2 class="section-title">Why Single-Language Tools Fail</h2>
+          <p class="section-desc">Security vulnerabilities in modern web applications live across the boundary between TypeScript server code and PostgreSQL policies.</p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Security Vector</th>
+                <th>ESLint</th>
+                <th>pgrls / SQL Linters</th>
+                <th>Supabase Edge Guard</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Cross-boundary RPC check (SG004)</strong><br><small style="color:var(--text-dim)">Client .rpc() calling public SECURITY DEFINER</small></td>
+                <td><span class="badge-cross">Cannot inspect SQL</span></td>
+                <td><span class="badge-cross">Cannot inspect TS</span></td>
+                <td><span class="badge-check">Cross-layer audit & safe fix</span></td>
+              </tr>
+              <tr>
+                <td><strong>Client bundle secret leakage (SG003)</strong><br><small style="color:var(--text-dim)">Traces import chains to prevent service_role leaks</small></td>
+                <td><span class="badge-cross">No bundle graph</span></td>
+                <td><span class="badge-cross">Cannot inspect TS</span></td>
+                <td><span class="badge-check">BFS import graph reachability</span></td>
+              </tr>
+              <tr>
+                <td><strong>Cookie auth spoofing (SG001)</strong><br><small style="color:var(--text-dim)">Catches getSession() vs getUser() on server</small></td>
+                <td><span class="badge-cross">No boundary model</span></td>
+                <td><span class="badge-cross">Cannot inspect TS</span></td>
+                <td><span class="badge-check">Auto-rewrites destructuring</span></td>
+              </tr>
+              <tr>
+                <td><strong>Missing table Row Level Security (SG010)</strong><br><small style="color:var(--text-dim)">Exposed schemas with no RLS protection</small></td>
+                <td><span class="badge-cross">Cannot inspect SQL</span></td>
+                <td><span class="badge-check">Flags SQL only</span></td>
+                <td><span class="badge-check">Flags & generates SQL migration</span></td>
+              </tr>
+              <tr>
+                <td><strong>Slow policy initplan (SG005)</strong><br><small style="color:var(--text-dim)">Unwrapped auth.uid() causing N-query bottlenecks</small></td>
+                <td><span class="badge-cross">Cannot inspect SQL</span></td>
+                <td><span class="badge-check">Static warning</span></td>
+                <td><span class="badge-check">Auto-wraps in (select ...)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Lovable / Cursor AI Fix Prompt</strong><br><small style="color:var(--text-dim)">Ready-to-paste prompts for vibe-coders</small></td>
+                <td><span class="badge-cross">None</span></td>
+                <td><span class="badge-cross">None</span></td>
+                <td><span class="badge-check">--format lovable-prompt</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rules Catalog -->
+    <section class="rules-section" id="rules">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Rule Catalog</div>
+          <h2 class="section-title">Built-In Heuristic Rules (SG001 - SG018)</h2>
+          <p class="section-desc">Every rule is designed to prefer false negatives over false positives, keeping your CI builds signal-rich and trustworthy.</p>
+        </div>
+
+        <div class="rules-grid">
+          <div class="rule-card">
+            <div class="rule-top">
+              <span class="rule-id">SG001</span>
+              <span class="finding-badge error">error · ts</span>
+            </div>
+            <div class="rule-title">ServerAuthGetSessionSpoof</div>
+            <p class="rule-summary">getSession() reads the cookie without cryptographic verification. Malicious callers can forge JWT claims to authenticate as any user.</p>
+          </div>
+
+          <div class="rule-card">
+            <div class="rule-top">
+              <span class="rule-id">SG002</span>
+              <span class="finding-badge error">error · ts</span>
+            </div>
+            <div class="rule-title">ServiceRoleWithoutAuthCheck</div>
+            <p class="rule-summary">A service_role client completely bypasses Row Level Security. Passing user input to it without prior auth verification exposes all data.</p>
+          </div>
+
+          <div class="rule-card">
+            <div class="rule-top">
+              <span class="rule-id">SG003</span>
+              <span class="finding-badge error">error · cross</span>
+            </div>
+            <div class="rule-title">ServiceRoleInClientBundle</div>
+            <p class="rule-summary">A service_role key referenced in a module reachable by the client bundle graph. Anyone can extract the key from browser JS.</p>
+          </div>
+
+          <div class="rule-card">
+            <div class="rule-top">
+              <span class="rule-id">SG004</span>
+              <span class="finding-badge error">error · cross</span>
+            </div>
+            <div class="rule-title">SecurityDefinerRpcExposed</div>
+            <p class="rule-summary">Browser calls supabase.rpc() on a SECURITY DEFINER function that is granted to anon/public and never checks auth.uid().</p>
+          </div>
+
+          <div class="rule-card">
+            <div class="rule-top">
+              <span class="rule-id">SG005</span>
+              <span class="finding-badge warning">warning · sql</span>
+            </div>
+            <div class="rule-title">RlsPolicyAuthUidNotWrapped</div>
+            <p class="rule-summary">Calling auth.uid() directly forces Postgres to re-evaluate auth for every candidate row. Wrapping in (select auth.uid()) computes it once.</p>
+          </div>
+
+          <div class="rule-card">
+            <div class="rule-top">
+              <span class="rule-id">SG010</span>
+              <span class="finding-badge error">error · sql</span>
+            </div>
+            <div class="rule-title">TableWithoutRls</div>
+            <p class="rule-summary">A table created in an exposed schema without ENABLE ROW LEVEL SECURITY allows anyone with the anon key full read and write access.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Integrations -->
+    <section class="integration-section" id="integration">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">Ecosystem</div>
+          <h2 class="section-title">Zero-Config CI & MCP Integrations</h2>
+          <p class="section-desc">Run on pull requests, pre-commit hooks, or directly inside your AI IDE.</p>
+        </div>
+
+        <div class="integration-grid">
+          <div class="integration-card">
+            <h3>GitHub Action (SARIF + Sticky PR)</h3>
+            <p>Runs on pull requests, uploads SARIF to the Security alerts tab, and keeps a single updated sticky PR comment.</p>
+            <div class="snippet-box">
+<pre><code># .github/workflows/edge-guard.yml
+name: Security Audit
+on: [pull_request]
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: malikad778/supabase-edge-guard@v0
+        with:
+          fail-on: error
+          upload-sarif: 'true'
+          comment: 'true'</code></pre>
+            </div>
+          </div>
+
+          <div class="integration-card">
+            <h3>Cursor & Claude Code (MCP Server)</h3>
+            <p>Run Edge Guard as an interactive tool via Model Context Protocol for automated scanning and fix suggestions.</p>
+            <div class="snippet-box">
+<pre><code>// cursor.json or claude_desktop_config.json
+{
+  "mcpServers": {
+    "supabase-edge-guard": {
+      "command": "npx",
+      "args": ["-y", "supabase-edge-guard", "mcp"]
+    }
+  }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <h4>supabase-edge-guard</h4>
+          <p>Cross-boundary static security analysis for Next.js and Supabase.</p>
+        </div>
+        <div class="footer-links">
+          <ul>
+            <li><strong>Documentation</strong></li>
+            <li><a href="https://github.com/malikad778/supabase-edge-guard/blob/main/docs/architecture.md">Architecture</a></li>
+            <li><a href="https://github.com/malikad778/supabase-edge-guard/blob/main/docs/ci.md">CI Guide</a></li>
+            <li><a href="https://github.com/malikad778/supabase-edge-guard/blob/main/docs/suppressing.md">Suppressions</a></li>
+          </ul>
+          <ul>
+            <li><strong>Community</strong></li>
+            <li><a href="https://github.com/malikad778/supabase-edge-guard" target="_blank" rel="noopener">GitHub Repository</a></li>
+            <li><a href="https://github.com/malikad778/supabase-edge-guard/issues" target="_blank" rel="noopener">Report Issue</a></li>
+            <li><a href="https://www.npmjs.com/package/supabase-edge-guard" target="_blank" rel="noopener">npm Package</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        MIT License © 2026 Malik Adnan Haider Awan. 100% offline static analysis.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    <span id="toast-msg">Copied to clipboard!</span>
+  </div>
+
+  <script>
+    // Presets
+    const PRESETS = {
+      sg001_get_session: {
+        filename: 'middleware.ts',
+        code: `import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: {} }
+  );
+
+  // VULNERABLE: getSession() trusts unverified cookie headers
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return NextResponse.redirect(new URL('/login', request.url));
+
+  return NextResponse.next();
+}`,
+        fixedCode: `import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: {} }
+  );
+
+  // SECURE: getUser() contacts Supabase Auth server to cryptographically verify claims
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.redirect(new URL('/login', request.url));
+
+  return NextResponse.next();
+}`,
+        ruleId: 'SG001',
+        ruleName: 'ServerAuthGetSessionSpoof',
+        severity: 'error',
+        line: 12,
+        msg: 'auth.getSession() trusts an unverified cookie in server code, so the user identity can be forged; use auth.getUser() instead.',
+        snippet: 'const { data: { session } } = await supabase.auth.getSession();'
+      },
+      sg010_table_without_rls: {
+        filename: 'supabase/migrations/20260101_init.sql',
+        code: `-- Migration file creating customer orders
+CREATE TABLE public.orders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id),
+  total_amount numeric not null,
+  status text not null default 'pending',
+  created_at timestamptz default now()
+);
+
+-- Note: RLS was never enabled on public.orders!
+-- Anyone with the anon key can read and write all customer orders.`,
+        fixedCode: `-- Migration file creating customer orders
+CREATE TABLE public.orders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id),
+  total_amount numeric not null,
+  status text not null default 'pending',
+  created_at timestamptz default now()
+);
+
+-- SECURE: Row Level Security enabled with ownership policy
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can only view their own orders"
+  ON public.orders
+  FOR SELECT
+  TO authenticated
+  USING (user_id = (select auth.uid()));`,
+        ruleId: 'SG010',
+        ruleName: 'TableWithoutRls',
+        severity: 'error',
+        line: 2,
+        msg: 'Table public.orders has no Row Level Security, so anyone with the anon key can read and write every row through the REST API.',
+        snippet: 'CREATE TABLE public.orders ('
+      },
+      sg004_definer_rpc: {
+        filename: 'app/components/Profile.tsx',
+        code: `import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+export async function deleteMyAccount(accountId: string) {
+  // Target function in SQL:
+  // CREATE FUNCTION delete_account(id uuid) RETURNS void SECURITY DEFINER ...
+  // GRANT EXECUTE ON FUNCTION delete_account TO anon, authenticated;
+  // VULNERABLE: targets SECURITY DEFINER function with public execute privileges!
+  const { error } = await supabase.rpc('delete_account', { id: accountId });
+  if (error) throw error;
+}`,
+        fixedCode: `import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+export async function deleteMyAccount(accountId: string) {
+  // SECURE: Server-side action verifies authenticated session before execution,
+  // or SQL function checks auth.uid() = id and revokes EXECUTE from anon.
+  const { error } = await supabase.rpc('delete_account_secure', { id: accountId });
+  if (error) throw error;
+}`,
+        ruleId: 'SG004',
+        ruleName: 'SecurityDefinerRpcExposed',
+        severity: 'error',
+        line: 11,
+        msg: "supabase.rpc('delete_account') targets a SECURITY DEFINER function that anon/public can execute and that never checks auth.uid().",
+        snippet: "await supabase.rpc('delete_account', { id: accountId });"
+      },
+      sg003_service_key_leak: {
+        filename: 'lib/supabase.ts',
+        code: `// Client-side helper imported by React components
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+// CRITICAL LEAK: service_role key imported into client bundle graph!
+export const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+export function getAdminClient() {
+  // Bypasses all Row Level Security policies from the browser
+  return createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!);
+}`,
+        fixedCode: `// Client-side helper imported by React components
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// SECURE: Browser code only references anon key.
+// service_role client is isolated exclusively in server-only route handlers.
+export function getBrowserClient() {
+  return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+}`,
+        ruleId: 'SG003',
+        ruleName: 'ServiceRoleInClientBundle',
+        severity: 'error',
+        line: 5,
+        msg: 'The service_role key is referenced in code bundled for the browser; anyone can extract it and bypass all RLS.',
+        snippet: 'export const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;'
+      },
+      sg005_unwrapped_uid: {
+        filename: 'supabase/migrations/policies.sql',
+        code: `-- Inefficient policy re-evaluates auth.uid() on each row
+CREATE POLICY "Users read own profile"
+  ON public.profiles
+  FOR SELECT
+  TO authenticated
+  USING (id = auth.uid());`,
+        fixedCode: `-- High performance policy wraps auth.uid() as (select auth.uid())
+-- Postgres evaluates this scalar subquery once per statement (initPlan)
+CREATE POLICY "Users read own profile"
+  ON public.profiles
+  FOR SELECT
+  TO authenticated
+  USING (id = (select auth.uid()));`,
+        ruleId: 'SG005',
+        ruleName: 'RlsPolicyAuthUidNotWrapped',
+        severity: 'warning',
+        line: 5,
+        msg: 'auth.uid() in policy is re-evaluated for every row; wrap it as (select auth.uid()) so Postgres computes it once.',
+        snippet: 'USING (id = auth.uid());'
+      }
+    };
+
+    // DOM Elements
+    const codeInput = document.getElementById('code-input');
+    const filenameEl = document.getElementById('current-filename');
+    const presetSelect = document.getElementById('preset-select');
+    const gradeDisplay = document.getElementById('grade-display');
+    const scoreText = document.getElementById('score-text');
+    const findingsCountSummary = document.getElementById('findings-count-summary');
+    const statusPill = document.getElementById('status-pill');
+    const findingsList = document.getElementById('findings-list');
+    const btnApplyFix = document.getElementById('btn-apply-fix');
+    const btnRunScan = document.getElementById('btn-run-scan');
+    const btnCopyLovable = document.getElementById('btn-copy-lovable');
+    const btnCopyCmd = document.getElementById('btn-copy-cmd');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-msg');
+
+    function showToast(msg) {
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function loadPreset(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      filenameEl.textContent = p.filename;
+      codeInput.value = p.code;
+      runScan();
+    }
+
+    function runScan() {
+      const code = codeInput.value;
+      const key = presetSelect.value;
+      const p = PRESETS[key];
+
+      // Check if code contains vulnerable pattern
+      let isVulnerable = false;
+      if (key === 'sg001_get_session' && code.includes('getSession()')) isVulnerable = true;
+      if (key === 'sg010_table_without_rls' && !code.includes('ENABLE ROW LEVEL SECURITY')) isVulnerable = true;
+      if (key === 'sg004_definer_rpc' && code.includes("'delete_account'")) isVulnerable = true;
+      if (key === 'sg003_service_key_leak' && code.includes('SUPABASE_SERVICE_ROLE_KEY')) isVulnerable = true;
+      if (key === 'sg005_unwrapped_uid' && code.includes('auth.uid()') && !code.includes('(select auth.uid())')) isVulnerable = true;
+
+      findingsList.innerHTML = '';
+
+      if (isVulnerable) {
+        const severity = p.severity;
+        const score = severity === 'error' ? 0 : 70;
+        const grade = severity === 'error' ? 'F' : 'C';
+
+        gradeDisplay.className = 'grade-badge';
+        gradeDisplay.textContent = grade;
+        scoreText.textContent = `Score ${score} / 100`;
+        findingsCountSummary.textContent = `1 ${severity} detected`;
+        statusPill.textContent = 'FAILING';
+        statusPill.style.color = severity === 'error' ? 'var(--error)' : 'var(--warning)';
+
+        const card = document.createElement('div');
+        card.className = `finding-card ${severity}`;
+        card.innerHTML = `
+          <div class="finding-top">
+            <span class="finding-badge ${severity}">${severity} · ${p.ruleId}</span>
+            <span class="finding-location">${p.filename}:${p.line}</span>
+          </div>
+          <div class="finding-rule">${p.ruleName}</div>
+          <div class="finding-msg">${p.msg}</div>
+          <div class="finding-snippet">${escapeHtml(p.snippet)}</div>
+        `;
+        findingsList.appendChild(card);
+      } else {
+        gradeDisplay.className = 'grade-badge grade-a';
+        gradeDisplay.textContent = 'A+';
+        scoreText.textContent = 'Score 100 / 100';
+        findingsCountSummary.textContent = '0 findings detected';
+        statusPill.textContent = 'CLEAN';
+        statusPill.style.color = 'var(--brand)';
+
+        const cleanMsg = document.createElement('div');
+        cleanMsg.style.padding = '2rem 1rem';
+        cleanMsg.style.textAlign = 'center';
+        cleanMsg.style.color = 'var(--text-muted)';
+        cleanMsg.innerHTML = `
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2" style="margin: 0 auto 0.75rem; display: block;">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <strong style="color: var(--text-main); font-size: 1rem; display: block; margin-bottom: 0.25rem;">Clean Architecture</strong>
+          No security vulnerabilities or RLS bypasses found in this file.
+        `;
+        findingsList.appendChild(cleanMsg);
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Event Listeners
+    presetSelect.addEventListener('change', (e) => loadPreset(e.target.value));
+    btnRunScan.addEventListener('click', runScan);
+    
+    btnApplyFix.addEventListener('click', () => {
+      const key = presetSelect.value;
+      const p = PRESETS[key];
+      if (p && p.fixedCode) {
+        codeInput.value = p.fixedCode;
+        runScan();
+        showToast('Auto-fix applied! Score increased to 100/100 (A+)');
+      }
+    });
+
+    btnCopyLovable.addEventListener('click', () => {
+      const key = presetSelect.value;
+      const p = PRESETS[key];
+      const prompt = `You are fixing security issues in my Supabase app. Apply ALL changes below. Do not change anything else.\n1. [${p.ruleId}] In ${p.filename} line ${p.line}, ${p.msg}\nAfter applying, list every file you changed.`;
+      navigator.clipboard.writeText(prompt);
+      showToast('Copied Lovable prompt to clipboard!');
+    });
+
+    btnCopyCmd.addEventListener('click', () => {
+      navigator.clipboard.writeText('npx supabase-edge-guard');
+      showToast('Copied "npx supabase-edge-guard" to clipboard!');
+    });
+
+    // Initial load
+    loadPreset('sg001_get_session');
+  </script>
+</body>
+</html>

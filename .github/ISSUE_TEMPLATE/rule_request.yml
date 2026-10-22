@@ -1,0 +1,17 @@
+name: Rule request
+description: Suggest a new check
+labels: [rule-request]
+body:
+  - type: textarea
+    id: incident
+    attributes:
+      {
+        label: The real-world failure this would catch,
+        description: Link an incident,
+        advisory or doc if you can,
+      }
+    validations: { required: true }
+  - type: textarea
+    id: example
+    attributes: { label: Bad and good example }
+    validations: { required: true }

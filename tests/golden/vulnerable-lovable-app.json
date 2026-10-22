@@ -1,0 +1,9 @@
+[
+  "SG017 warning .env:1",
+  "SG017 error .env:2",
+  "SG017 error src/integrations/supabase/client.ts:5",
+  "SG003 error src/integrations/supabase/client.ts:5",
+  "SG001 error supabase/functions/send-email/index.ts:9",
+  "SG010 error supabase/migrations/20240201000000_init.sql:6",
+  "SG005 warning supabase/migrations/20240201000000_init.sql:12"
+]

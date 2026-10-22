@@ -1,0 +1,21 @@
+name: False positive / false negative
+description: A rule fired when it should not (or missed a real problem)
+labels: [rule-accuracy]
+body:
+  - type: input
+    id: rule
+    attributes: { label: Rule id, placeholder: SG001 }
+    validations: { required: true }
+  - type: textarea
+    id: code
+    attributes:
+      {
+        label: Code that is (not) flagged,
+        description: Please trim to the minimum and remove secrets,
+        render: text,
+      }
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes: { label: Why is this correct / incorrect? }
+    validations: { required: true }

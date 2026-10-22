@@ -1,0 +1,55 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+      - name: Docs are up to date
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 22
+        run: |
+          pnpm gen-docs
+          git diff --exit-code -- docs README.md schema.json
+
+  node18-smoke:
+    name: runtime smoke test on Node 18
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: node bin/supabase-edge-guard.js --version
+      - name: scan examples (exit code 1 expected)
+        run: |
+          set +e
+          node bin/supabase-edge-guard.js examples/vulnerable-nextjs-app --format json --no-baseline > out.json
+          code=$?
+          [ "$code" -eq 1 ] && grep -q '"SG010"' out.json

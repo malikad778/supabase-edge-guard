@@ -1,0 +1,7 @@
+project_id = "vulnerable-demo"
+
+[api]
+schemas = ["public", "graphql_public"]
+
+[functions.sync-users]
+verify_jwt = false

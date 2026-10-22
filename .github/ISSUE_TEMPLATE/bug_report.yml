@@ -1,0 +1,15 @@
+name: Bug report
+description: The tool crashed or produced wrong output
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes: { label: supabase-edge-guard version, placeholder: '0.2.0' }
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: Command, output and what you expected }
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes: { label: Minimal reproduction, description: The smallest file(s) that trigger it }

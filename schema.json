@@ -1,0 +1,66 @@
+{
+  "$ref": "#/definitions/SupabaseEdgeGuardConfig",
+  "definitions": {
+    "SupabaseEdgeGuardConfig": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "migrationsDir": {
+          "type": "string"
+        },
+        "functionsDir": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "off",
+              "error",
+              "warning",
+              "info"
+            ]
+          }
+        },
+        "ignoreTables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exposedSchemas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failOn": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "info",
+            "never"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

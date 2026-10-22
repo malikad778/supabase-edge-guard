@@ -1,0 +1,82 @@
+name: 'Supabase Edge Guard'
+description: 'Static security analysis for Supabase apps (Next.js, TanStack Start, Lovable, SQL migrations). Uploads SARIF and posts a sticky PR comment.'
+author: 'malikad778'
+branding:
+  icon: 'shield'
+  color: 'green'
+inputs:
+  path:
+    description: 'Project directory to scan'
+    default: '.'
+  fail-on:
+    description: 'Fail the job at this severity or above: error | warning | info | never'
+    default: 'error'
+  version:
+    description: 'supabase-edge-guard version to run (npm dist-tag or version)'
+    default: 'latest'
+  upload-sarif:
+    description: 'Upload results to GitHub code scanning (needs security-events: write)'
+    default: 'true'
+  comment:
+    description: 'Post / update a sticky summary comment on pull requests (needs pull-requests: write)'
+    default: 'true'
+  changed-only:
+    description: 'Only report findings in files changed in this run'
+    default: 'false'
+  github-token:
+    description: 'Token used to post the PR comment'
+    default: ${{ github.token }}
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Scan (SARIF + markdown summary)
+      shell: bash
+      env:
+        SEG_PATH: ${{ inputs.path }}
+        SEG_VERSION: ${{ inputs.version }}
+        SEG_CHANGED: ${{ inputs.changed-only }}
+      run: |
+        extra=()
+        if [ "$SEG_CHANGED" = "true" ]; then extra+=(--changed-only); fi
+        npx --yes "supabase-edge-guard@${SEG_VERSION}" "$SEG_PATH" --format sarif --output edge-guard.sarif --fail-on never "${extra[@]}"
+        npx --yes "supabase-edge-guard@${SEG_VERSION}" "$SEG_PATH" --format markdown --output edge-guard-comment.md --fail-on never "${extra[@]}"
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      continue-on-error: true
+      with:
+        sarif_file: edge-guard.sarif
+        category: supabase-edge-guard
+
+    - name: Sticky PR comment
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        marker='<!-- supabase-edge-guard -->'
+        existing=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | head -n 1 || true)
+        if [ -n "$existing" ]; then
+          gh api --method PATCH "repos/${REPO}/issues/comments/${existing}" -F body=@edge-guard-comment.md >/dev/null || echo "::warning::Could not update PR comment (fork or missing permission)"
+        else
+          gh api --method POST "repos/${REPO}/issues/${PR}/comments" -F body=@edge-guard-comment.md >/dev/null || echo "::warning::Could not create PR comment (fork or missing permission)"
+        fi
+
+    - name: Gate
+      shell: bash
+      env:
+        SEG_PATH: ${{ inputs.path }}
+        SEG_VERSION: ${{ inputs.version }}
+        SEG_FAIL: ${{ inputs.fail-on }}
+        SEG_CHANGED: ${{ inputs.changed-only }}
+      run: |
+        extra=()
+        if [ "$SEG_CHANGED" = "true" ]; then extra+=(--changed-only); fi
+        npx --yes "supabase-edge-guard@${SEG_VERSION}" "$SEG_PATH" --format github --fail-on "$SEG_FAIL" "${extra[@]}"
