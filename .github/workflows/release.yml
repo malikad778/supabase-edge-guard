@@ -26,6 +26,6 @@ jobs:
           major="${GITHUB_REF_NAME%%.*}"
           git tag -f "$major"
           git push -f origin "$major"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
