@@ -172,7 +172,22 @@ describe('framework detection, score, paths', () => {
   it('is deterministic', () => {
     const files = { 'supabase/migrations/1.sql': `${BAD_SQL}create table public.u (id int);` };
     const root = makeProject(files);
-    expect(scan({ root, baseline: false }).findings).toEqual(scan({ root, baseline: false }).findings);
+    const normalize = (findings: ReturnType<typeof scan>['findings']) =>
+      findings.map((f) => ({
+        ...f,
+        fix: f.fix
+          ? {
+              ...f.fix,
+              newFiles: f.fix.newFiles?.map((nf) => ({
+                ...nf,
+                file: nf.file.replace(/\d{14}/, '<TIMESTAMP>'),
+              })),
+            }
+          : undefined,
+      }));
+    const run1 = normalize(scan({ root, baseline: false }).findings);
+    const run2 = normalize(scan({ root, baseline: false }).findings);
+    expect(run1).toEqual(run2);
   });
 });
 
