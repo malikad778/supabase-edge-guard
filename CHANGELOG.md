@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+- Added Packagist/Composer support (composer.json and PHP binary wrapper bin/supabase-edge-guard).
+- Fixed cross-platform CI/CD and release workflow automation.
+- Published interactive demo scanner on GitHub Pages.
+
 ## 0.2.0
 - All 18 rules (SG001–SG018) plus scanner diagnostics (SG000).
 - Cross-layer rules: SG004 (RPC ↔ SECURITY DEFINER ↔ grants), SG008 (storage calls ↔ `storage.objects` policies), SG003 (client-reachable secrets via import graph).

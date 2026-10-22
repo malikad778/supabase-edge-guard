@@ -1,6 +1,8 @@
 # Supabase Edge Guard
 
+[![CI](https://github.com/malikad778/supabase-edge-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/malikad778/supabase-edge-guard/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/supabase-edge-guard?color=3ecf8e&logo=npm)](https://www.npmjs.com/package/supabase-edge-guard)
+[![Packagist Version](https://img.shields.io/packagist/v/malikad778/supabase-edge-guard?color=f28d1a&logo=packagist)](https://packagist.org/packages/malikad778/supabase-edge-guard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node: >=18.17](https://img.shields.io/badge/Node->=18.17-brightgreen.svg)](https://nodejs.org)
 [![SARIF 2.1.0](https://img.shields.io/badge/SARIF-2.1.0-orange.svg)](https://docs.github.com/en/code-security/code-scanning)
@@ -34,8 +36,12 @@ It correlates your **TypeScript abstract syntax tree (AST)** and your **SQL migr
 Run instantly without installation via `npx`:
 
 ```bash
-# Scan the current project directory
+# Scan the current project directory (Node.js)
 npx supabase-edge-guard
+
+# Or install and run via Composer (PHP / Packagist)
+composer require malikad778/supabase-edge-guard
+./vendor/bin/supabase-edge-guard
 
 # Preview automated security fixes without modifying files
 npx supabase-edge-guard --fix --dry-run
@@ -59,7 +65,7 @@ npx supabase-edge-guard --format lovable-prompt
 ### Terminal Output Preview
 
 ```
- supabase-edge-guard v0.2.0 - Next.js (app router) · 12 TS files · 1 migration
+ supabase-edge-guard v0.2.1 - Next.js (app router) · 12 TS files · 1 migration
 
  ✖ error   SG010  Table public.orders has no Row Level Security, so anyone with the anon key can read and write every row through the REST API.
     supabase/migrations/20240101000000_init.sql:3:1
