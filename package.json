@@ -1,6 +1,7 @@
 {
   "name": "supabase-edge-guard",
   "version": "0.2.0",
+  "packageManager": "pnpm@10.31.0",
   "description": "Cross-boundary static analyzer for Next.js, TanStack Start, Lovable and Supabase apps. Catches getSession() spoofing, service_role bypasses, exposed SECURITY DEFINER RPCs and RLS mistakes before deploy.",
   "type": "module",
   "bin": {
